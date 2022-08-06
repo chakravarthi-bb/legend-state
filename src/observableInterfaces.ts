@@ -132,7 +132,7 @@ export type ListenerFn<T = any> = (
     valueAtPath: any,
     prevAtPath: any
 ) => void;
-export type ListenerFnSaved<T = any> = { shallow: boolean } & ListenerFn<T>;
+export type ListenerFnSaved<T = any> = { shallow?: boolean } & ListenerFn<T>;
 
 type Recurse<T, K extends keyof T, TRecurse> = T[K] extends
     | Function
@@ -312,7 +312,7 @@ export interface ProxyValue {
     pathParent: string;
     key: string | number;
     root: ObservableWrapper;
-    listeners?: ListenerFnSaved[];
+    listeners?: Set<ListenerFnSaved>;
 }
 
 export type ObservableValue<T> = T extends Shallow<infer t>

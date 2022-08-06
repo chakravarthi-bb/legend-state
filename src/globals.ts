@@ -14,7 +14,6 @@ export function getNodeValue(node: ProxyValue): any {
     let child = node.root._;
     let parent = child;
     const arr = node.path.split(delim);
-    // let path = '_';
     for (let i = 1; i < arr.length; i++) {
         let key = arr[i];
         if (key !== undefined && child) {
@@ -26,11 +25,8 @@ export function getNodeValue(node: ProxyValue): any {
                     if (k !== undefined) key = k as any;
                 }
             }
-            // const key = isArray(parent) &&
             child = child[key];
             parent = child;
-
-            // path += delim + arr[i];
         }
     }
     return child;

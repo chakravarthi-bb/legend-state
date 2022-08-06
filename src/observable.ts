@@ -90,13 +90,16 @@ function updateNodes(parent: ProxyValue, obj: Record<any, any> | Array<any>, pre
     const length = keys.length;
 
     let hasADiff = false;
-    let arrayIDMap: Map<string, number>;
+
+    // Prepare arrayID maps if this is an array
+    let arrayIDMap: Map<string | number, number>;
     if (isArr) {
         arrayIDMap = parent.root.arrayIDMaps.get(parent.path);
         if (!arrayIDMap) {
             arrayIDMap = new Map();
             parent.root.arrayIDMaps.set(parent.path, arrayIDMap);
         }
+        arrayIDMap.clear();
     }
 
     for (let i = 0; i < length; i++) {
@@ -104,6 +107,7 @@ function updateNodes(parent: ProxyValue, obj: Record<any, any> | Array<any>, pre
         const value = obj[key];
         const prev = prevValue?.[key];
 
+        // If this is an array it needs to save item id to index for accessing in getNodeValue
         if (isArr) {
             arrayIDMap.set(value.id, i);
         }
@@ -143,7 +147,7 @@ function getProxy(node: ProxyValue, p?: string | number) {
 
 const proxyHandler: ProxyHandler<any> = {
     get(target: ProxyValue, p: any) {
-        // Return true is called by isObservable()
+        // Return true if called by isObservable()
         if (p === symbolIsObservable) {
             return true;
         }
@@ -209,7 +213,7 @@ const proxyHandler: ProxyHandler<any> = {
             return vProp;
         }
 
-        // TODO Error handle array access
+        // If this is an array it uses the id of the item for the path instead of the index
         return getProxy(target, (isArray(value) && vProp?.id) || p);
     },
     // Forward all proxy properties to the target's value
@@ -346,8 +350,7 @@ function _notify(
     // Notify all listeners
     if (listeners) {
         let getPrevious;
-        for (let i = 0; i < listeners.length; i++) {
-            const listener = listeners[i];
+        for (let listener of listeners) {
             // Notify if listener is not shallow or if this is the first level
             if (!listener.shallow || level <= 0) {
                 // Create a function to get the previous data. Computing a clone of previous data can be expensive if doing

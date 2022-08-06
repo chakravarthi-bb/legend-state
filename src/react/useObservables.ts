@@ -52,7 +52,7 @@ interface SavedRef<
  */
 export function useObservables<
     T extends ObservableCheckerRender | Record<string, ObservableCheckerRender> | ObservableCheckerRender[]
->(fn: () => T, deps?: any[]): MappedObservableValue<T> {
+>(fn: () => T): MappedObservableValue<T> {
     const ref = useRef<SavedRef<T>>({ fn, isFirst: true });
     ref.current.fn = fn;
 
@@ -104,7 +104,7 @@ export function useObservables<
         update();
 
         return () => listeners.forEach((dispose) => dispose());
-    }, deps || []);
+    }, []);
 
     return value as MappedObservableValue<T>;
 }

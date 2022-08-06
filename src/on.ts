@@ -50,21 +50,20 @@ export function onTrue<T extends boolean>(node: ProxyValue, callback?: () => voi
     return onEquals(node, true as T, callback);
 }
 
-export function onChange(node: ProxyValue, callback: ListenerFn<any>, shallow?: boolean) {
-    const c = callback as ListenerFnSaved;
+export function onChange(node: ProxyValue, callback: ListenerFnSaved<any>, shallow?: boolean) {
     if (shallow) {
-        c.shallow = true;
+        callback.shallow = true;
     }
     let listeners = node.listeners;
     if (!listeners) {
-        listeners = [];
+        listeners = new Set();
         node.listeners = listeners;
     }
-    listeners.push(c);
+    listeners.add(callback);
 
-    return () => listeners.splice(listeners.indexOf(c), 1);
+    return () => listeners.delete(callback);
 }
 
-export function onChangeShallow(node: ProxyValue, callback: ListenerFn<any>) {
+export function onChangeShallow(node: ProxyValue, callback: ListenerFnSaved<any>) {
     return onChange(node, callback, /*shallow*/ true);
 }
