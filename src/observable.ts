@@ -1,3 +1,4 @@
+import { mapPersistences } from 'src/persist/persistObservable';
 import { delim, getChildNode, getNodeValue, getParentNode, symbolGet, symbolIsObservable } from './globals';
 import { isArray, isFunction, isPrimitive, isSymbol } from './is';
 import { observableBatcher, observableBatcherNotify } from './observableBatcher';
@@ -82,18 +83,30 @@ function collectionSetter(node: ProxyValue, target: any, prop: string, ...args: 
     return ret;
 }
 
-function updateNodes(parent: ProxyValue, obj: Record<any, any> | Array<any>, prevValue?: any) {
+function updateNodes(parent: ProxyValue, obj: Record<any, any> | Array<any>, prevValue?: any, notify?: boolean) {
     const isArr = isArray(obj);
     // If array it's faster to just use the array
     const keys = isArr ? obj : Object.keys(obj);
     const length = keys.length;
 
     let hasADiff = false;
+    let arrayIDMap: Map<string, number>;
+    if (isArr) {
+        arrayIDMap = parent.root.arrayIDMaps.get(parent.path);
+        if (!arrayIDMap) {
+            arrayIDMap = new Map();
+            parent.root.arrayIDMaps.set(parent.path, arrayIDMap);
+        }
+    }
 
     for (let i = 0; i < length; i++) {
-        const key = isArr ? i : keys[i];
+        let key = isArr ? i : keys[i];
         const value = obj[key];
         const prev = prevValue?.[key];
+
+        if (isArr) {
+            arrayIDMap.set(value.id, i);
+        }
 
         if (!isArr && prevValue && value !== prev) {
             const isObj = !isPrimitive(value);
@@ -101,12 +114,12 @@ function updateNodes(parent: ProxyValue, obj: Record<any, any> | Array<any>, pre
             const child: ProxyValue = getChildNode(parent, key);
             // If object iterate through its children
             if (isObj) {
-                updateNodes(child, value, prev);
+                updateNodes(child, value, prev, notify);
             }
 
             // Notify for this child if this element is different and it has listeners
             // But do not notify child if the parent is an array - the array's listener will cover it
-            const doNotify = !!child.listeners;
+            const doNotify = notify && !!child.listeners;
             if (doNotify) {
                 hasADiff = true;
                 _notify(child, value, [], value, prev, 0);
@@ -174,7 +187,8 @@ const proxyHandler: ProxyHandler<any> = {
                     // Bind this looping function to an array of proxies
                     const arr = [];
                     for (let i = 0; i < value.length; i++) {
-                        arr.push(getProxy(node, i));
+                        const id = value[i]?.id;
+                        arr.push(getProxy(node, id || i));
                     }
                     return vProp.bind(arr);
                 }
@@ -195,7 +209,8 @@ const proxyHandler: ProxyHandler<any> = {
             return vProp;
         }
 
-        return getProxy(target, p);
+        // TODO Error handle array access
+        return getProxy(target, (isArray(value) && vProp?.id) || p);
     },
     // Forward all proxy properties to the target's value
     getPrototypeOf(target) {
@@ -262,22 +277,28 @@ function setProp(node: ProxyValue, key: string | number, newValue?: any, level?:
 
     inSetFn = true;
 
+    // Get the value of the parent
+    let parentValue = getNodeValue(node);
+    const actualKey = key;
+
+    // Save the previous value first
+    const prevValue = parentValue[actualKey];
+
+    if (isArray(parentValue)) {
+        const k = newValue?.id || prevValue?.id;
+        if (k) key = k;
+    }
+
     // Get the child node for updating and notifying
     const childNode = getChildNode(node, key);
 
-    // Get the value of the parent
-    let parentValue = getNodeValue(node);
-
-    // Save the previous value first
-    const prevValue = parentValue[key];
-
     // Save the new value
-    parentValue[key] = newValue;
+    parentValue[actualKey] = newValue;
 
     let hasADiff: boolean;
     // If new value is an object or array update notify down the tree
     if (!isPrim) {
-        hasADiff = updateNodes(childNode, newValue, prevValue);
+        hasADiff = updateNodes(childNode, newValue, prevValue, true);
     }
 
     // Notify for this element if it's an object or it's changed
@@ -421,6 +442,7 @@ export function observable<T>(obj: T): ObservableOrPrimitive<T> {
         listenerMap: new Map(),
         proxies: new Map(),
         proxyValues: new Map(),
+        arrayIDMaps: !isPrim && new Map(),
     } as ObservableWrapper;
 
     const node: ProxyValue = {

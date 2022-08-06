@@ -62,14 +62,14 @@ describe('Set', () => {
         expect(obs).toEqual({ test: { text: { text2: 't2' } } });
     });
     test('Set array', () => {
-        const obs = observable({ arr: [{ text: 'hi' }] });
-        obs.arr.set([{ text: 'hi2' }]);
+        const obs = observable({ arr: [{ id: 'hi', text: 'hi' }] });
+        obs.arr.set([{ id: 'hi', text: 'hi2' }]);
         expect(obs.arr.length).toEqual(1);
 
-        expect(obs.arr.get()).toEqual([{ text: 'hi2' }]);
+        expect(obs.arr.get()).toEqual([{ id: 'hi', text: 'hi2' }]);
         expect(obs.arr[0].text).toEqual('hi2');
         obs.arr[0].text.set('hi3');
-        expect(obs.arr.map((a) => a)).toEqual([{ text: 'hi3' }]);
+        expect(obs.arr.map((a) => a)).toEqual([{ id: 'hi', text: 'hi3' }]);
     });
     //     // TODO
     //     // test('Set at root', () => {
@@ -886,6 +886,25 @@ describe('Array', () => {
         const arr = [];
         obs.arr.forEach((a) => arr.push(isObservable(a)));
         expect(arr).toEqual([true]);
+    });
+    test('Array has stable reference', () => {
+        const obs = observable({ arr: [] });
+        obs.arr.set([
+            { id: 'h1', text: 'hi' },
+            { id: 'h2', text: 'hello' },
+        ]);
+        const second = obs.arr[1];
+        const handler = expectChangeHandler(second);
+        obs.arr.splice(0, 1);
+        obs.arr[0].text.set('hello there');
+
+        expect(handler).toHaveBeenCalledWith(
+            { id: 'h2', text: 'hello there' },
+            { id: 'h2', text: 'hello' },
+            ['text'],
+            'hello there',
+            'hello'
+        );
     });
 });
 describe('Deep changes keep listeners', () => {

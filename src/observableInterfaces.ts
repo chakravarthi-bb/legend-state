@@ -288,6 +288,7 @@ export interface ObservableWrapper {
     isPrimitive: boolean;
     proxies: Map<string, object>;
     proxyValues: Map<string, ProxyValue>;
+    arrayIDMaps?: Map<string, Map<string | number, number>>;
 }
 
 export type ObservablePrimitiveChild<T = any> = ObservablePrimitiveFns<T>;

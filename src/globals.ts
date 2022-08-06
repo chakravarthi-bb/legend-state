@@ -1,5 +1,5 @@
 import { tracking } from './state';
-import { isFunction, isPrimitive } from './is';
+import { isArray, isFunction, isPrimitive } from './is';
 import { ObservableCheckerRender, ProxyValue } from './observableInterfaces';
 
 export const delim = '\uFEFF';
@@ -11,11 +11,26 @@ export const symbolGet = Symbol('get');
 export const symbolIsObservable = Symbol('isObservable');
 
 export function getNodeValue(node: ProxyValue): any {
-    let child = node.root;
+    let child = node.root._;
+    let parent = child;
     const arr = node.path.split(delim);
-    for (let i = 0; i < arr.length; i++) {
-        if (arr[i] !== undefined && child) {
-            child = child[arr[i]];
+    // let path = '_';
+    for (let i = 1; i < arr.length; i++) {
+        let key = arr[i];
+        if (key !== undefined && child) {
+            if (isArray(child)) {
+                const path = arr.slice(0, i).join(delim);
+                const arrayIDMap = node.root.arrayIDMaps.get(path);
+                if (arrayIDMap) {
+                    const k = arrayIDMap.get(key) ?? arrayIDMap.get(+key);
+                    if (k !== undefined) key = k as any;
+                }
+            }
+            // const key = isArray(parent) &&
+            child = child[key];
+            parent = child;
+
+            // path += delim + arr[i];
         }
     }
     return child;
