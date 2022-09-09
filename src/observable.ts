@@ -1,6 +1,7 @@
 import { batchNotify, beginBatch, endBatch } from './batching';
 import {
     checkTracking,
+    extraPrimitiveProps,
     get,
     getChildNode,
     getNodeValue,
@@ -17,9 +18,10 @@ import {
     ObservableObjectOrPrimitive,
     ObservableObjectOrPrimitiveDefault,
     ObservableObjectOrPrimitiveSafe,
+    ObservablePrimitive,
     ObservableWrapper,
 } from './observableInterfaces';
-import { ObservablePrimitive } from './ObservablePrimitive';
+import { ObservablePrimitiveClass } from './ObservablePrimitive';
 import { onChange } from './onChange';
 import { tracking, untrack, updateTracking } from './tracking';
 
@@ -44,7 +46,7 @@ const ArrayLoopers = new Set<keyof Array<any>>(['every', 'some', 'filter', 'forE
 const objectFns = new Map<string, Function>([
     ['get', get],
     ['set', set],
-    ['ref', ref],
+    ['prop', prop],
     ['onChange', onChange],
     ['assign', assign],
     ['delete', deleteFn],
@@ -206,10 +208,10 @@ function updateNodes(parent: NodeValue, obj: Record<any, any> | Array<any>, prev
 }
 
 function getPrimitive(node: NodeValue, p?: string) {
-    // Get the child node if p prop
-    if (p !== undefined) node = getChildNode(node, p);
+    const needsWrap = !node.proxy;
+    const proxy = getProxy(node, p);
 
-    return node.primitive || (node.primitive = new ObservablePrimitive(node));
+    return needsWrap ? new ObservablePrimitiveClass(proxy) : proxy;
 }
 
 function getProxy(node: NodeValue, p?: string | number) {
@@ -219,14 +221,12 @@ function getProxy(node: NodeValue, p?: string | number) {
     // Create a proxy if not already cached and return it
     let proxy = node.proxy;
     if (!proxy) {
-        // If this node previous had a signal delete it
-        if (node.primitive) delete node.primitive;
         // Return a Proxy for this node
         proxy = node.proxy = new Proxy<NodeValue>(node, proxyHandler) as ObservableObject;
     }
     return proxy;
 }
-function ref(node: NodeValue, keyOrTrack?: string | number | boolean | Symbol, track?: boolean | Symbol) {
+function prop(node: NodeValue, keyOrTrack?: string | number | boolean | Symbol, track?: boolean | Symbol) {
     if (isBoolean(keyOrTrack) || isSymbol(keyOrTrack)) {
         track = keyOrTrack;
         keyOrTrack = undefined;
@@ -307,13 +307,14 @@ const proxyHandler: ProxyHandler<any> = {
 
         // Accessing primitive returns the raw value
         if (isNullish || isPrimitive(vProp)) {
-            // Return a signal
-            if (isObject(value) && value.hasOwnProperty(p)) {
-                const child = getChildNode(node, p);
-                return child.primitive || (child.primitive = new ObservablePrimitive(child));
+            if (extraPrimitiveProps.size) {
+                const vPrim = extraPrimitiveProps.get(p);
+                if (vPrim !== undefined) {
+                    return vPrim?.__fn?.(getProxy(target)) ?? vPrim;
+                }
             }
             // Update that this primitive node was accessed for observers
-            else if (tracking.nodes) {
+            if (tracking.nodes) {
                 if (isArray(value) && p === 'length') {
                     updateTracking(node, undefined, Tracking.shallow);
                 } else if (node.root.isPrimitive) {
@@ -321,7 +322,9 @@ const proxyHandler: ProxyHandler<any> = {
                 }
             }
 
-            return vProp;
+            if (!(isObject(value) && value.hasOwnProperty(p))) {
+                return vProp;
+            }
         }
 
         // Return an observable proxy to the property
@@ -592,15 +595,24 @@ function assign(node: NodeValue, value: any) {
 
     // Set inAssign to allow setting on safe observables
     inAssign = true;
-    Object.assign(proxy, value);
-    inAssign = false;
-
-    endBatch();
+    try {
+        Object.assign(proxy, value);
+    } finally {
+        inAssign = false;
+        endBatch();
+    }
 
     return proxy;
 }
 
 function deleteFn(node: NodeValue, key?: string | number) {
+    if (!key && !node.parent) {
+        throw new Error(
+            process.env.NODE_ENV === 'development'
+                ? '[legend-state] Cannot delete the root of an observable'
+                : '[legend-state] Cannot delete observable'
+        );
+    }
     // If called without a key, delete by key from the parent node
     if (key === undefined && node.parent) {
         key = node.key;
@@ -650,11 +662,7 @@ export function observable<T>(value: T | Promise<T>, safe?: boolean): Observable
         key: undefined,
     };
 
-    if (isPrim) {
-        return new ObservablePrimitive(node) as ObservableObjectOrPrimitive<T>;
-    }
-
-    const proxy = getProxy(node) as ObservableObjectOrPrimitive<T>;
+    const proxy = (isPrim ? getPrimitive(node) : getProxy(node)) as ObservableObjectOrPrimitive<T>;
 
     if (promise) {
         promise.catch((error) => {

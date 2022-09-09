@@ -8,8 +8,9 @@ export function event(): ObservableEvent {
     return {
         dispatch: function () {
             // Notify increments the value so that the observable changes
-            obs.value++;
+            obs.set((v) => v + 1);
         },
         on: obs.onChange.bind(obs) as any,
+        get: obs.get,
     };
 }

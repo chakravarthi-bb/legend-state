@@ -1,17 +1,16 @@
-import { ObservablePrimitive } from './ObservablePrimitive';
 import { symbolDateModified, symbolGetNode, symbolIsObservable } from './globals';
 import { isObject } from './is';
 import type { NodeValue, Observable, ObservableObject } from './observableInterfaces';
 
-export function isObservable(obs: any): obs is ObservableObject | ObservablePrimitive {
-    return obs && (obs instanceof ObservablePrimitive || !!obs[symbolIsObservable as any]);
+export function isObservable(obs: any): obs is ObservableObject {
+    return obs && !!obs[symbolIsObservable as any];
 }
 
-export function getNode(obs: Observable | ObservablePrimitive): NodeValue {
-    return obs[symbolGetNode] || (obs as ObservablePrimitive).getNode?.();
+export function getNode(obs: Observable): NodeValue {
+    return obs[symbolGetNode];
 }
 
-export function lockEdits(obs: Observable | ObservablePrimitive, value: boolean) {
+export function lockEdits(obs: Observable, value: boolean) {
     const root = getNode(obs)?.root;
     if (root) {
         root.locked = value;

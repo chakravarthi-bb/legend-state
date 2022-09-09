@@ -1,9 +1,3 @@
-import type { ObservablePrimitive } from './ObservablePrimitive';
-
-export type ObservablePrimitiveOptional<T = any> = {
-    [K in keyof ObservablePrimitive<T>]?: ObservablePrimitive<T>[K];
-};
-
 export type ObservableEventType = 'change' | 'changeShallow' | 'equals' | 'hasValue' | 'true';
 export interface ListenerOptions {
     runImmediately?: boolean;
@@ -13,14 +7,21 @@ export interface ListenerOptions {
 
 export interface ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
-    ref?(track?: boolean | Symbol): Observable<T>;
+    prop?(track?: boolean | Symbol): Observable<T>;
+    prop?<K extends keyof T>(prop: K, track?: boolean | Symbol): Observable<T[K]>;
     onChange?(cb: ListenerFn<T>, options?: ListenerOptions): ObservableListenerDispose;
+}
+export interface ObservablePrimitive<T = any> extends ObservableBaseFns<T> {
+    set?(value: T | ((prev: T) => T)): ObservablePrimitive<T>;
 }
 export interface ObservableFns<T> extends ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
     get?<K extends keyof T>(key: K, track?: boolean | Symbol): T[K];
-    ref?(track?: boolean | Symbol): Observable<T>;
-    ref?<K extends keyof T>(prop: K, track?: boolean | Symbol): Observable<T[K]>;
+    prop?(track?: boolean | Symbol): ObservableObject<T>;
+    prop?<K extends keyof T>(
+        prop: K,
+        track?: boolean | Symbol
+    ): T[K] extends Primitive ? ObservablePrimitive<T[K]> : ObservableObject<T[K]>;
     set?(value: T | ((prev: T) => T)): Observable<T>;
     set?<K extends keyof T>(key: K, prev: T[K] | ((prev: T[K]) => T[K])): Observable<T[K]>;
     set?<V>(key: string | number, value: V): Observable<V>;
@@ -69,7 +70,7 @@ type Recurse<T, K extends keyof T, TRecurse> = T[K] extends
     | Promise<any>
     ? T[K]
     : T[K] extends Primitive
-    ? T[K] & ObservablePrimitiveOptional<T[K]>
+    ? T[K] & ObservablePrimitive<T[K]>
     : T[K] extends Array<any>
     ? Omit<T[K], ArrayOverrideFnNames> & ObservableFns<T[K]> & ObservableArrayOverride<ObservableObject<T[K][number]>>
     : T extends object
@@ -89,7 +90,7 @@ type ObservableFnsRecursiveDefaultObject<T> = {
     readonly [K in keyof T]: Recurse<T, K, ObservableObjectDefault<T[K]>>;
 };
 type PrimitiveChildren<T> = {
-    [K in keyof T]: T[K] & ObservablePrimitiveOptional<T[K]>;
+    [K in keyof T]: T[K] & ObservablePrimitive<T[K]>;
 };
 type ObservableFnsRecursiveDefault<T> = ObservableFnsRecursiveDefaultObject<NonPrimitiveKeys<T>> &
     PrimitiveChildren<PrimitiveKeys<T>>;
@@ -98,6 +99,7 @@ export interface ObservableEvent {
     dispatch(): void;
     on(cb?: () => void): ObservableListenerDispose;
     on(eventType: 'change', cb?: () => void): ObservableListenerDispose;
+    get(): void;
 }
 
 export type QueryByModified<T> =
@@ -241,7 +243,7 @@ export type ObservableComputed<T = any> = ObservableComputedFns<T> &
     ObservableComputedFnsRecursive<T> &
     ([T] extends [Primitive] ? Omit<ObservablePrimitive<T>, 'set'> : T);
 
-export type Observable<T = any> = ObservablePrimitiveOptional<T> | ObservableFns<T>;
+export type Observable<T = any> = ObservablePrimitive<T> | ObservableFns<T>;
 export type ObservableReadable<T = any> = ObservableFns<T> | ObservableComputed<T> | ObservablePrimitive<T>;
 // | ObservableRef<T>;
 export type ObservableWriteable<T = any> = ObservableFns<T> | ObservablePrimitive<T>; // | ObservableRef<T>;
@@ -251,7 +253,6 @@ export interface NodeValue {
     parent: NodeValue;
     children?: Map<string | number, NodeValue>;
     proxy?: ObservableObject;
-    primitive?: ObservablePrimitive;
     key: string | number;
     root: ObservableWrapper;
     listeners?: Map<string, ListenerFn>;

@@ -1,4 +1,4 @@
-import { effect, tracking, setupTracking, ObservablePrimitive } from '@legendapp/state';
+import { effect, extraPrimitiveProps, setupTracking, tracking } from '@legendapp/state';
 import { ComponentProps, createElement, FC, forwardRef, memo, useEffect } from 'react';
 import { useForceRender } from './useForceRender';
 
@@ -78,27 +78,37 @@ export function observer<T extends FC<any>>(
     return memo(observer, propsAreEqual) as unknown as T;
 }
 
-function wrap() {
-    // @ts-ignore
-    const $$typeof = createElement('a').$$typeof;
+const Text = observer(function Text({ data }: { data: any }) {
+    return data?.get() || null;
+});
 
-    const Text = observer(function Text({ data }: { data: any }) {
-        return data.value;
-    });
+const ReactTypeofSymbol = hasSymbol ? Symbol.for('react.element') : (createElement('a') as any).$$typeof;
+extraPrimitiveProps.set('$$typeof', ReactTypeofSymbol);
+extraPrimitiveProps.set('type', Text);
+extraPrimitiveProps.set('props', {
+    __fn: (obs) => ({ data: obs }),
+});
+extraPrimitiveProps.set('ref', null);
 
-    console.log('doing it', ObservablePrimitive);
+// function wrap() {
+//     // @ts-ignore
+//     const $$typeof = createElement('a').$$typeof;
 
-    Object.defineProperties(ObservablePrimitive.prototype, {
-        $$typeof: { value: $$typeof },
-        type: { value: Text },
-        props: {
-            get() {
-                return { data: this };
-            },
-        },
-        ref: { value: null },
-    });
+//     console.log($$typeof);
 
-    console.log('did it');
-}
-wrap();
+//     console.log('doing it', ObservablePrimitiveClass);
+
+//     Object.defineProperties(ObservablePrimitiveClass.prototype, {
+//         $$typeof: { value: $$typeof },
+//         type: { value: Text },
+//         props: {
+//             get() {
+//                 return { data: this };
+//             },
+//         },
+//         ref: { value: null },
+//     });
+
+//     console.log('did it');
+// }
+// wrap();

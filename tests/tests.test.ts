@@ -172,7 +172,7 @@ describe('Listeners', () => {
     test('Listen by ref', () => {
         const obs = observable({ test: { text: 't' } });
         expect(obs.test.text.get()).toEqual('t');
-        const handler = expectChangeHandler(obs.test.ref('text'));
+        const handler = expectChangeHandler(obs.test.prop('text'));
         obs.test.set('text', 't2');
         expect(obs.test.text.get()).toEqual('t2');
         expect(handler).toHaveBeenCalledWith('t2', 't', [], 't2', 't');
@@ -723,16 +723,16 @@ describe('Primitives', () => {
     });
     test('observable root can be primitive', () => {
         const obs = observable(10);
-        expect(obs.value).toEqual(10);
+        expect(obs.get()).toEqual(10);
         obs.set(20);
-        expect(obs.value).toEqual(20);
+        expect(obs.get()).toEqual(20);
     });
-    test('set value on observable notifies', () => {
+    test('set observable primitive notifies', () => {
         const obs = observable(10);
-        expect(obs.value).toEqual(10);
+        expect(obs.get()).toEqual(10);
         const handler = expectChangeHandler(obs);
-        obs.value = 20;
-        expect(obs.value).toEqual(20);
+        obs.set(20);
+        expect(obs.get()).toEqual(20);
         expect(handler).toHaveBeenCalledWith(20, 10, [], 20, 10);
     });
     test('Primitive callback does not have value', () => {
@@ -744,7 +744,7 @@ describe('Primitives', () => {
     });
     test('Set function with ref is stable', () => {
         const obs = observable({ num1: 10, num2: 20 });
-        const set = obs.ref('num1').set;
+        const set = obs.prop('num1').set;
         expect(obs.num2.get()).toEqual(20);
         set(30);
         expect(obs.num1.get()).toEqual(30);
@@ -1482,7 +1482,7 @@ describe('Shallow', () => {
         obs.onChange(handler, { shallow: true });
         obs.val.set(true);
         expect(handler).not.toHaveBeenCalled();
-        obs.ref('val2').set(10);
+        obs.prop('val2').set(10);
         expect(handler).toHaveBeenCalledTimes(1);
     });
     test('Shallow deep object', () => {
@@ -1532,19 +1532,19 @@ describe('Computed', () => {
     test('Basic computed', () => {
         const obs = observable({ test: 10, test2: 20 });
         const comp = computed(() => obs.test.get() + obs.test2.get());
-        expect(comp.value).toEqual(30);
+        expect(comp.get()).toEqual(30);
     });
     test('Multiple computed changes', () => {
         const obs = observable({ test: 10, test2: 20 });
         const comp = computed(() => obs.test.get() + obs.test2.get());
-        expect(comp.value).toEqual(30);
+        expect(comp.get()).toEqual(30);
         const handler = expectChangeHandler(comp);
         obs.test.set(5);
         expect(handler).toHaveBeenCalledWith(25, 30, [], 25, 30);
-        expect(comp.value).toEqual(25);
+        expect(comp.get()).toEqual(25);
         obs.test.set(1);
         expect(handler).toHaveBeenCalledWith(21, 25, [], 21, 25);
-        expect(comp.value).toEqual(21);
+        expect(comp.get()).toEqual(21);
     });
     test('Cannot directly set a computed', () => {
         const obs = observable({ test: 10, test2: 20 });
@@ -1564,9 +1564,9 @@ describe('Computed', () => {
     });
     test('Computed object is observable', () => {
         const obs = observable({ test: 10, test2: 20 });
-        const comp = computed(() => ({ v: obs.test.get() + obs.test2.get() }));
-        expect(comp.v.get()).toEqual(30);
-        const handler = expectChangeHandler(comp.v);
+        const comp = computed(() => ({ value: obs.test.get() + obs.test2.get() }));
+        expect(comp.value.get()).toEqual(30);
+        const handler = expectChangeHandler(comp.value);
         obs.test = 5;
         expect(handler).toHaveBeenCalledWith(25, 30, [], 25, 30);
     });
@@ -1645,80 +1645,80 @@ describe('Batching', () => {
 describe('ref function', () => {
     test('With and without ref', () => {
         const obs = observable({ text: 'hi' });
-        const prox = obs.ref('text');
+        const prox = obs.prop('text');
         const prox2 = obs.text;
         expect(prox === prox2).toEqual(true);
         expect(prox2.get()).toEqual('hi');
     });
     test('keyed ref', () => {
         const obs = observable({ text: 'hi' });
-        const prox = obs.ref('text');
-        const prox2 = obs.ref('text');
+        const prox = obs.prop('text');
+        const prox2 = obs.prop('text');
         expect(prox === prox2).toEqual(true);
         expect(prox2.get()).toEqual('hi');
     });
     test('ref through undefined works', () => {
         const obs = observable({ test: undefined } as { test: { test2: { test3: { test4: string } } } });
-        const refTest4 = obs.ref('test').ref('test2').ref('test3').ref('test4');
+        const refTest4 = obs.prop('test').prop('test2').prop('test3').prop('test4');
         const handler = expectChangeHandler(refTest4);
         obs.set({ test: { test2: { test3: { test4: 'hi' } } } });
         expect(handler).toHaveBeenCalledWith('hi', undefined, [], 'hi', undefined);
     });
-    //     test('ref through undefined with get()', () => {
-    //         const obs = observable({ test: undefined } as { test: { test2: { test3: { test4: string } } } });
-    //         const refTest4 = obs.ref('test').ref('test2').ref('test3').ref('test4');
-    //         expect(refTest4.get()).toEqual(undefined);
-    //     });
-    // });
-    // describe('effect', () => {
-    //     test('Basic effect', () => {
-    //         const obs = observable({ text: 'hi' });
-    //         const fn = jest.fn();
-    //         effect(() => {
-    //             fn(obs.text);
-    //         });
-    //         obs.text.set('hello');
-    //         expect(fn).toHaveBeenCalledWith('hello');
-    //         obs.text.set('a');
-    //         expect(fn).toHaveBeenCalledWith('a');
-    //     });
-    // });
-    // describe('Observable with promise', () => {
-    //     test('Promise', async () => {
-    //         let resolver;
-    //         const promise = new Promise<number>((resolve) => {
-    //             resolver = resolve;
-    //         });
-    //         const obs = observable(promise);
-    //         expect(obs.value).toEqual(undefined);
-    //         resolver(10);
-    //         await promiseTimeout(0);
-    //         expect(obs.value).toEqual(10);
-    //     });
-    //     test('when with promise observable', async () => {
-    //         let resolver;
-    //         const promise = new Promise<number>((resolve) => {
-    //             resolver = resolve;
-    //         });
-    //         const obs = observable(promise);
-    //         expect(obs.value).toEqual(undefined);
-    //         const fn = jest.fn();
-    //         when(() => obs.get() === 10, fn);
-    //         resolver(10);
-    //         await promiseTimeout(1000);
-    //         expect(fn).toHaveBeenCalled();
-    //     });
-    // });
-    // describe('Locking', () => {
-    //     test('Locking', () => {
-    //         const obs = observable({ text: 'hi' });
-    //         lockEdits(obs, true);
-    //         expect(() => obs.text.set('hello')).toThrowError();
-    //         expect(() => (obs.text = 'hello')).toThrowError();
-    //         expect(() => obs.set({ text: 'hello' })).toThrowError();
-    //         expect(obs.get()).toEqual({ text: 'hi' });
-    //         lockEdits(obs, false);
-    //         obs.text.set('hey');
-    //         expect(obs.get()).toEqual({ text: 'hey' });
-    //     });
+    test('ref through undefined with get()', () => {
+        const obs = observable({ test: undefined } as { test: { test2: { test3: { test4: string } } } });
+        const refTest4 = obs.prop('test').prop('test2').prop('test3').prop('test4');
+        expect(refTest4.get()).toEqual(undefined);
+    });
+});
+describe('effect', () => {
+    test('Basic effect', () => {
+        const obs = observable({ text: 'hi' });
+        const fn = jest.fn();
+        effect(() => {
+            fn(obs.text.get());
+        });
+        obs.text.set('hello');
+        expect(fn).toHaveBeenCalledWith('hello');
+        obs.text.set('a');
+        expect(fn).toHaveBeenCalledWith('a');
+    });
+});
+describe('Observable with promise', () => {
+    test('Promise', async () => {
+        let resolver;
+        const promise = new Promise<number>((resolve) => {
+            resolver = resolve;
+        });
+        const obs = observable(promise);
+        expect(obs.get()).toEqual(undefined);
+        resolver(10);
+        await promiseTimeout(0);
+        expect(obs.get()).toEqual(10);
+    });
+    test('when with promise observable', async () => {
+        let resolver;
+        const promise = new Promise<number>((resolve) => {
+            resolver = resolve;
+        });
+        const obs = observable(promise);
+        expect(obs.get()).toEqual(undefined);
+        const fn = jest.fn();
+        when(() => obs.get() === 10, fn);
+        resolver(10);
+        await promiseTimeout(1000);
+        expect(fn).toHaveBeenCalled();
+    });
+});
+describe('Locking', () => {
+    test('Locking', () => {
+        const obs = observable({ text: 'hi' });
+        lockEdits(obs, true);
+        expect(() => obs.text.set('hello')).toThrowError();
+        expect(() => (obs.text = 'hello')).toThrowError();
+        expect(() => obs.set({ text: 'hello' })).toThrowError();
+        expect(obs.get()).toEqual({ text: 'hi' });
+        lockEdits(obs, false);
+        obs.text.set('hey');
+        expect(obs.get()).toEqual({ text: 'hey' });
+    });
 });

@@ -21,7 +21,7 @@ export function onChange(
 
         if (options.runImmediately) {
             const value = getNodeValue(node);
-            callback(value, () => value, [], value, value, node.primitive || node.proxy);
+            callback(value, () => value, [], value, value, node.proxy);
         }
     }
 
