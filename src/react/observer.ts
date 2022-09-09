@@ -27,19 +27,23 @@ export function observer<T extends FC<any>>(
 
     // Create a wrapper observer component
     let observer = function (props, ref) {
-        const forceRender = useForceRender();
         let inRender = true;
         let rendered;
         let cachedNodes;
 
+        const forceRender = useForceRender();
+
         const update = function () {
             if (inRender) {
+                // If rendering, run and return the component
                 rendered = component(props, ref);
             } else {
+                // If not rendering, this is from observable changing so trigger a render
                 forceRender();
             }
             inRender = false;
 
+            // Workaround for React 18's double calling useEffect - cached the tracking nodes
             if (process.env.NODE_ENV === 'development') {
                 cachedNodes = tracking.nodes;
             }
@@ -60,6 +64,7 @@ export function observer<T extends FC<any>>(
                 };
             });
         } else {
+            // Return dispose to cleanup before each render or unmount
             useEffect(() => dispose);
         }
 
