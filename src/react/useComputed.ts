@@ -2,22 +2,22 @@ import { effect, setupTracking, tracking } from '@legendapp/state';
 import { useEffect } from 'react';
 import { useForceRender } from './useForceRender';
 
-export function useComputed(selector: () => void) {
-    let inRender = true;
-    let rendered;
+export function useComputed<T>(selector: () => T) {
+    let inRun = true;
+    let ret: T;
     let cachedNodes;
 
     const forceRender = useForceRender();
 
     const update = function () {
-        if (inRender) {
-            // If rendering, run and return the component
-            rendered = selector();
+        if (inRun) {
+            // If running, run and return the component
+            ret = selector();
         } else {
-            // If not rendering, this is from observable changing so trigger a render
+            // If not running, this is from observable changing so trigger a render
             forceRender();
         }
-        inRender = false;
+        inRun = false;
 
         // Workaround for React 18's double calling useEffect - cached the tracking nodes
         if (process.env.NODE_ENV === 'development') {
@@ -44,5 +44,5 @@ export function useComputed(selector: () => void) {
         useEffect(() => dispose);
     }
 
-    return rendered;
+    return ret;
 }
