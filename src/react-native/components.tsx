@@ -12,11 +12,11 @@ import {
     TextStyle,
     ViewStyle,
 } from 'react-native';
-import { NotPrimitive, ObservableObject, ObservableWriteable, Primitive } from '../observableInterfaces';
+import { ObservableObject, ObservableWriteable, Primitive } from '../observableInterfaces';
 import { observer } from '../react/observer';
 
-type Props<TValue, TStyle, TProps, TBind> = Omit<TProps, 'style'> & {
-    bind?: ObservableWriteable<TValue> & NotPrimitive<TBind>;
+type Props<TValue, TStyle, TProps> = Omit<TProps, 'style'> & {
+    bind?: ObservableWriteable<TValue>;
     style?: StyleProp<TStyle> | ((value: TValue) => StyleProp<TStyle>);
 };
 
@@ -27,10 +27,7 @@ export const Binder = function <
     TProps extends { onChange?: any; style?: StyleProp<any> }
 >(Component: TElement, getValue: (p: any) => TValue) {
     return observer(
-        forwardRef(function Bound<TBind extends ObservableWriteable<any>>(
-            { bind, ...props }: Props<TValue, TStyle, TProps, TBind>,
-            ref: LegacyRef<TElement>
-        ) {
+        forwardRef(function Bound({ bind, ...props }: Props<TValue, TStyle, TProps>, ref: LegacyRef<TElement>) {
             if (bind) {
                 const { onChange, style } = props;
 
@@ -55,9 +52,7 @@ export const Binder = function <
             return createElement(Component as any, ref ? { ...props, ref } : props);
         })
         // TS hack because forwardRef messes with the templating
-    ) as any as <TBind extends ObservableObject<any>>(
-        props: Props<TValue, TStyle, TProps, TBind>
-    ) => ReactElement | null;
+    );
 };
 
 export namespace LS {

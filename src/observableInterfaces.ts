@@ -219,7 +219,6 @@ export interface ObservableWrapper {
 }
 
 export type Primitive = boolean | string | number | Date;
-export type NotPrimitive<T> = T extends Primitive ? never : T;
 
 export type ObservableObject<T = any> = ObservableFnsRecursive<T> & ObservableFns<T>;
 export type ObservableObjectSafe<T = any> = ObservableFnsRecursiveSafe<T> & ObservableFns<T>;
