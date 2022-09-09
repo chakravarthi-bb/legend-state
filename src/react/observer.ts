@@ -1,6 +1,5 @@
-import { effect, tracking } from '@legendapp/state';
-import { ComponentProps, FC, forwardRef, memo, useEffect } from 'react';
-import { setupTracking } from 'src/effect';
+import { effect, tracking, setupTracking, ObservablePrimitive } from '@legendapp/state';
+import { ComponentProps, createElement, FC, forwardRef, memo, useEffect } from 'react';
 import { useForceRender } from './useForceRender';
 
 const hasSymbol = typeof Symbol === 'function' && Symbol.for;
@@ -78,3 +77,28 @@ export function observer<T extends FC<any>>(
 
     return memo(observer, propsAreEqual) as unknown as T;
 }
+
+function wrap() {
+    // @ts-ignore
+    const $$typeof = createElement('a').$$typeof;
+
+    const Text = observer(function Text({ data }: { data: any }) {
+        return data.value;
+    });
+
+    console.log('doing it', ObservablePrimitive);
+
+    Object.defineProperties(ObservablePrimitive.prototype, {
+        $$typeof: { value: $$typeof },
+        type: { value: Text },
+        props: {
+            get() {
+                return { data: this };
+            },
+        },
+        ref: { value: null },
+    });
+
+    console.log('did it');
+}
+wrap();

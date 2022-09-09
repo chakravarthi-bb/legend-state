@@ -96,7 +96,7 @@ describe('Persist local', () => {
             local: 'jestlocal',
         });
 
-        expect(obs2).toEqual({ test: 'hello' });
+        expect(obs2.get()).toEqual({ test: 'hello' });
     });
     test('Saves empty root object to local', () => {
         const obs = observable({ test: { text: 'hi' } } as { test: Record<string, any> });

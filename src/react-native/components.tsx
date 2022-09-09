@@ -12,7 +12,7 @@ import {
     TextStyle,
     ViewStyle,
 } from 'react-native';
-import { NotPrimitive, ObservableFns, ObservableWriteable, Primitive } from '../observableInterfaces';
+import { NotPrimitive, ObservableObject, ObservableWriteable, Primitive } from '../observableInterfaces';
 import { observer } from '../react/observer';
 
 type Props<TValue, TStyle, TProps, TBind> = Omit<TProps, 'style'> & {
@@ -55,7 +55,9 @@ export const Binder = function <
             return createElement(Component as any, ref ? { ...props, ref } : props);
         })
         // TS hack because forwardRef messes with the templating
-    ) as any as <TBind extends ObservableFns<any>>(props: Props<TValue, TStyle, TProps, TBind>) => ReactElement | null;
+    ) as any as <TBind extends ObservableObject<any>>(
+        props: Props<TValue, TStyle, TProps, TBind>
+    ) => ReactElement | null;
 };
 
 export namespace LS {

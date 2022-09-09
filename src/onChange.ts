@@ -1,5 +1,5 @@
 import { getNodeValue } from './globals';
-import { ListenerFn, NodeValue } from './observableInterfaces';
+import { ListenerFn, NodeValue, Observable, ObservableObject } from './observableInterfaces';
 
 let listenerIndex = 0;
 
@@ -21,7 +21,7 @@ export function onChange(
 
         if (options.runImmediately) {
             const value = getNodeValue(node);
-            callback(value, () => value, [], value, value, node.proxy);
+            callback(value, () => value, [], value, value, node.primitive || node.proxy);
         }
     }
 

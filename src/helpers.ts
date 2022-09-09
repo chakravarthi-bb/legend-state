@@ -1,16 +1,17 @@
+import { ObservablePrimitive } from './ObservablePrimitive';
 import { symbolDateModified, symbolGetNode, symbolIsObservable } from './globals';
 import { isObject } from './is';
-import type { NodeValue, ObservableObject, ObservableRef } from './observableInterfaces';
+import type { NodeValue, Observable, ObservableObject } from './observableInterfaces';
 
-export function isObservable(obs: any): obs is ObservableObject {
-    return obs && !!obs[symbolIsObservable as any];
+export function isObservable(obs: any): obs is ObservableObject | ObservablePrimitive {
+    return obs && (obs instanceof ObservablePrimitive || !!obs[symbolIsObservable as any]);
 }
 
-export function getNode(obs: ObservableRef): NodeValue {
-    return obs[symbolGetNode];
+export function getNode(obs: Observable | ObservablePrimitive): NodeValue {
+    return obs[symbolGetNode] || (obs as ObservablePrimitive).getNode?.();
 }
 
-export function lockEdits(obs: ObservableRef, value: boolean) {
+export function lockEdits(obs: Observable | ObservablePrimitive, value: boolean) {
     const root = getNode(obs)?.root;
     if (root) {
         root.locked = value;
@@ -26,7 +27,7 @@ export function mergeIntoObservable(target: ObservableObject | object, ...source
     if (isObject(target) && isObject(source)) {
         if (source[symbolDateModified as any]) {
             if (needsSet) {
-                target.set(symbolDateModified, source[symbolDateModified as any]);
+                (target as ObservableObject).set(symbolDateModified, source[symbolDateModified as any]);
             } else {
                 target[symbolDateModified as any] = source[symbolDateModified as any];
             }
@@ -35,11 +36,11 @@ export function mergeIntoObservable(target: ObservableObject | object, ...source
         for (const key in source) {
             if (isObject(source[key])) {
                 if (!value[key] || !isObject(value[key])) {
-                    needsSet ? target.set(key, {}) : (target[key] = {});
+                    needsSet ? (target as ObservableObject).set(key, {}) : (target[key] = {});
                 }
                 mergeIntoObservable(target[key], source[key]);
             } else {
-                needsSet ? target.set(key, source[key]) : (target[key] = source[key]);
+                needsSet ? (target as ObservableObject).set(key, source[key]) : (target[key] = source[key]);
             }
         }
     }

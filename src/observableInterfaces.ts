@@ -1,3 +1,9 @@
+import type { ObservablePrimitive } from './ObservablePrimitive';
+
+export type ObservablePrimitiveOptional<T = any> = {
+    [K in keyof ObservablePrimitive<T>]?: ObservablePrimitive<T>[K];
+};
+
 export type ObservableEventType = 'change' | 'changeShallow' | 'equals' | 'hasValue' | 'true';
 export interface ListenerOptions {
     runImmediately?: boolean;
@@ -7,25 +13,21 @@ export interface ListenerOptions {
 
 export interface ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
-    ref?(track?: boolean | Symbol): ObservableRef<T>;
+    ref?(track?: boolean | Symbol): Observable<T>;
     onChange?(cb: ListenerFn<T>, options?: ListenerOptions): ObservableListenerDispose;
 }
-export interface ObservablePrimitiveFns<T> extends ObservableBaseFns<T> {
-    set?(value: T | ((prev: T) => T)): ObservableChild<T>;
-}
-export interface ObservableObjectFns<T> extends ObservablePrimitiveFns<T> {
+export interface ObservableFns<T> extends ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
     get?<K extends keyof T>(key: K, track?: boolean | Symbol): T[K];
-    ref?(track?: boolean | Symbol): ObservableRef<T>;
-    ref?<K extends keyof T>(prop: K, track?: boolean | Symbol): ObservableRef<T[K]>;
-    set?(value: T | ((prev: T) => T)): ObservableChild<T>;
-    set?<K extends keyof T>(key: K, prev: T[K] | ((prev: T[K]) => T[K])): ObservableChild<T[K]>;
-    set?<V>(key: string | number, value: V): ObservableChild<V>;
-    assign?(value: T | Partial<T>): ObservableChild<T>;
-    delete?(): ObservableChild<T>;
-    delete?<K extends keyof T>(key: K | string | number): ObservableChild<T>;
+    ref?(track?: boolean | Symbol): Observable<T>;
+    ref?<K extends keyof T>(prop: K, track?: boolean | Symbol): Observable<T[K]>;
+    set?(value: T | ((prev: T) => T)): Observable<T>;
+    set?<K extends keyof T>(key: K, prev: T[K] | ((prev: T[K]) => T[K])): Observable<T[K]>;
+    set?<V>(key: string | number, value: V): Observable<V>;
+    assign?(value: T | Partial<T>): Observable<T>;
+    delete?(): Observable<T>;
+    delete?<K extends keyof T>(key: K | string | number): Observable<T>;
 }
-export type ObservableFns<T> = ObservablePrimitiveFns<T> | ObservableObjectFns<T>;
 export interface ObservableComputedFns<T> {
     get(track?: boolean | Symbol): T;
     onChange(cb: ListenerFn<T>, options?: ListenerOptions): ObservableListenerDispose;
@@ -52,7 +54,7 @@ export type ListenerFn<T = any> = (
     path: (string | number)[],
     valueAtPath: any,
     prevAtPath: any,
-    obs: ObservableRef
+    obs: Observable
 ) => void;
 
 type PrimitiveKeys<T> = Pick<T, { [K in keyof T]-?: T[K] extends Primitive ? K : never }[keyof T]>;
@@ -67,11 +69,9 @@ type Recurse<T, K extends keyof T, TRecurse> = T[K] extends
     | Promise<any>
     ? T[K]
     : T[K] extends Primitive
-    ? T[K] & ObservablePrimitiveFns<T[K]>
+    ? T[K] & ObservablePrimitiveOptional<T[K]>
     : T[K] extends Array<any>
-    ? Omit<T[K], ArrayOverrideFnNames> &
-          ObservableObjectFns<T[K]> &
-          ObservableArrayOverride<ObservableObject<T[K][number]>>
+    ? Omit<T[K], ArrayOverrideFnNames> & ObservableFns<T[K]> & ObservableArrayOverride<ObservableObject<T[K][number]>>
     : T extends object
     ? TRecurse
     : T[K];
@@ -88,14 +88,16 @@ type ObservableFnsRecursiveSafe<T> = {
 type ObservableFnsRecursiveDefaultObject<T> = {
     readonly [K in keyof T]: Recurse<T, K, ObservableObjectDefault<T[K]>>;
 };
+type PrimitiveChildren<T> = {
+    [K in keyof T]: T[K] & ObservablePrimitiveOptional<T[K]>;
+};
 type ObservableFnsRecursiveDefault<T> = ObservableFnsRecursiveDefaultObject<NonPrimitiveKeys<T>> &
-    ObservableFnsRecursive<PrimitiveKeys<T>>;
+    PrimitiveChildren<PrimitiveKeys<T>>;
 
 export interface ObservableEvent {
     dispatch(): void;
     on(cb?: () => void): ObservableListenerDispose;
     on(eventType: 'change', cb?: () => void): ObservableListenerDispose;
-    get(): void;
 }
 
 export type QueryByModified<T> =
@@ -223,12 +225,11 @@ export interface ObservableWrapper {
 export type Primitive = boolean | string | number | Date;
 export type NotPrimitive<T> = T extends Primitive ? never : T;
 
-export type ObservableObject<T = any> = ObservableFnsRecursive<T> & ObservableObjectFns<T>;
-export type ObservableObjectSafe<T = any> = ObservableFnsRecursiveSafe<T> & ObservableObjectFns<T>;
-export type ObservableObjectDefault<T = any> = ObservableFnsRecursiveDefault<T> & ObservableObjectFns<T>;
-export type ObservableChild<T = any> = [T] extends [Primitive] ? T & ObservablePrimitiveFns<T> : ObservableObject<T>;
-export type ObservableRef<T = any> = [T] extends [Primitive] ? ObservablePrimitiveFns<T> : ObservableObject<T>;
-export type ObservablePrimitive<T = any> = { value: T } & ObservablePrimitiveFns<T>;
+export type ObservableObject<T = any> = ObservableFnsRecursive<T> & ObservableFns<T>;
+export type ObservableObjectSafe<T = any> = ObservableFnsRecursiveSafe<T> & ObservableFns<T>;
+export type ObservableObjectDefault<T = any> = ObservableFnsRecursiveDefault<T> & ObservableFns<T>;
+// export type ObservableChild<T = any> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
+// export type ObservableRef<T = any> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
 export type ObservableObjectOrPrimitive<T> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
 export type ObservableObjectOrPrimitiveSafe<T> = [T] extends [Primitive]
     ? ObservablePrimitive<T>
@@ -238,21 +239,19 @@ export type ObservableObjectOrPrimitiveDefault<T> = [T] extends [Primitive]
     : ObservableObjectDefault<T>;
 export type ObservableComputed<T = any> = ObservableComputedFns<T> &
     ObservableComputedFnsRecursive<T> &
-    ([T] extends [Primitive] ? { readonly value: T } : T);
-export type Observable<T = any> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
+    ([T] extends [Primitive] ? Omit<ObservablePrimitive<T>, 'set'> : T);
 
-export type ObservableReadable<T = any> =
-    | ObservableObject<T>
-    | ObservableComputed<T>
-    | ObservablePrimitive<T>
-    | ObservableRef<T>;
-export type ObservableWriteable<T = any> = ObservableObject<T> | ObservablePrimitive<T> | ObservableRef<T>;
+export type Observable<T = any> = ObservablePrimitiveOptional<T> | ObservableFns<T>;
+export type ObservableReadable<T = any> = ObservableFns<T> | ObservableComputed<T> | ObservablePrimitive<T>;
+// | ObservableRef<T>;
+export type ObservableWriteable<T = any> = ObservableFns<T> | ObservablePrimitive<T>; // | ObservableRef<T>;
 
 export interface NodeValue {
     id: number;
     parent: NodeValue;
     children?: Map<string | number, NodeValue>;
-    proxy?: object;
+    proxy?: ObservableObject;
+    primitive?: ObservablePrimitive;
     key: string | number;
     root: ObservableWrapper;
     listeners?: Map<string, ListenerFn>;

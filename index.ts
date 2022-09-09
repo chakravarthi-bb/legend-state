@@ -20,3 +20,7 @@ export { tracking } from './src/tracking';
 export { symbolDateModified, symbolIsObservable } from './src/globals';
 /** @internal */
 export { getNode } from './src/helpers';
+/** @internal */
+export { setupTracking } from './src/effect';
+/** @internal */
+export { ObservablePrimitive } from './src/ObservablePrimitive';

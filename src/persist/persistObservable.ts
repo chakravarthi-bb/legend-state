@@ -1,5 +1,7 @@
 import { when, mergeIntoObservable, observable, symbolDateModified, batch } from '@legendapp/state';
 import type {
+    Observable,
+    ObservableFns,
     ObservableObject,
     ObservablePersistLocal,
     ObservablePersistRemote,
@@ -90,8 +92,8 @@ function onChangeRemote(localState: LocalState, cb: () => void) {
     localState.tempDisableSaveRemote = false;
 }
 
-async function loadLocal(
-    obs: ObservableReadable,
+async function loadLocal<T>(
+    obs: ObservableFns<T>,
     persistOptions: PersistOptions,
     obsState: ObservableObject<ObservablePersistState>,
     localState: LocalState
@@ -141,7 +143,7 @@ async function loadLocal(
     obsState.set('isLoadedLocal', true);
 }
 
-export function persistObservable<T>(obs: ObservableReadable<T>, persistOptions: PersistOptions<T>) {
+export function persistObservable<T>(obs: ObservableFns<T>, persistOptions: PersistOptions<T>) {
     const obsState = observable<ObservablePersistState>({
         isLoadedLocal: false,
         isLoadedRemote: false,

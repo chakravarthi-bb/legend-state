@@ -1,7 +1,7 @@
 import { isFunction, isObservable, Tracking } from '@legendapp/state';
 import { createElement, ReactElement, ReactNode, useMemo, useRef } from 'react';
 import type { NotPrimitive, ObservableObject, ObservableReadable } from '../observableInterfaces';
-import { observer } from './observer';
+import { observer } from '@legendapp/state/react';
 
 const returnTrue = function () {
     return true;

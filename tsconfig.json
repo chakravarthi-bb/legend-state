@@ -36,6 +36,9 @@
             "@legendapp/state/persist": [
                 "persist"
             ],
+            "@legendapp/state/react": [
+                "react"
+            ],
         },
         "resolveJsonModule": true,
         "noEmit": true
