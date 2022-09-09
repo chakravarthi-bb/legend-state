@@ -12,13 +12,13 @@ import {
     TextareaHTMLAttributes,
     useCallback,
 } from 'react';
-import type { NotPrimitive, ObservableWriteable, Primitive } from '../observableInterfaces';
+import type { ObservableWriteable, Primitive } from '../observableInterfaces';
 import { observer } from '@legendapp/state/react';
 
-type Props<TValue, TProps, TBind> = Omit<TProps, 'className' | 'style'> & {
+type Props<TValue, TProps> = Omit<TProps, 'className' | 'style'> & {
     className?: string | ((value: TValue) => string);
     style?: CSSProperties | ((value: TValue) => CSSProperties);
-    bind?: ObservableWriteable<TValue> & NotPrimitive<TBind>;
+    bind?: ObservableWriteable<TValue>;
 };
 
 export const Binder = function <
@@ -27,10 +27,7 @@ export const Binder = function <
     TProps extends { onChange?: any; value?: any; className?: string; style?: CSSProperties }
 >(Component) {
     return observer(
-        forwardRef(function Bound<TBind extends ObservableWriteable<any>>(
-            { bind, ...props }: Props<TValue, TProps, TBind>,
-            ref: LegacyRef<TElement>
-        ) {
+        forwardRef(function Bound({ bind, ...props }: Props<TValue, TProps>, ref: LegacyRef<TElement>) {
             if (bind) {
                 const { onChange, className, style } = props;
 
@@ -57,10 +54,7 @@ export const Binder = function <
             }
 
             return createElement(Component as any, ref ? { ...props, ref } : props);
-            // TS hack because forwardRef messes with the templating
-        }) as any as <TBind extends ObservableWriteable<any>>(
-            props: Props<TValue, TProps, TBind>
-        ) => ReactElement | null
+        })
     );
 };
 

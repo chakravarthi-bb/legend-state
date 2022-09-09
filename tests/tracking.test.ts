@@ -20,25 +20,17 @@ describe('Tracking', () => {
 
         expect(tracking.nodes.size).toEqual(0);
     });
-    test('ref() does not observe', () => {
+    test('ref to primitive does not observe', () => {
         const obs = observable({ test: { test2: { test3: 'hi' } } });
-        const ref = obs.test.test2.prop();
+        const ref = obs.test.test2;
 
         expect(tracking.nodes.size).toEqual(0);
 
         expect(ref.get(false)).toEqual({ test3: 'hi' });
     });
-    test('ref(true) observes', () => {
+    test('child of prop observes', () => {
         const obs = observable({ test: { test2: { test3: 'hi' } } });
-        const ref = obs.test.test2.prop(true);
-
-        expect(tracking.nodes.size).toEqual(1);
-
-        expect(ref.get()).toEqual({ test3: 'hi' });
-    });
-    test('child of ref() observes', () => {
-        const obs = observable({ test: { test2: { test3: 'hi' } } });
-        const ref = obs.test.test2.prop();
+        const ref = obs.test.prop('test2');
 
         expect(tracking.nodes.size).toEqual(0);
 

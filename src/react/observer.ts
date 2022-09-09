@@ -89,26 +89,3 @@ extraPrimitiveProps.set('props', {
     __fn: (obs) => ({ data: obs }),
 });
 extraPrimitiveProps.set('ref', null);
-
-// function wrap() {
-//     // @ts-ignore
-//     const $$typeof = createElement('a').$$typeof;
-
-//     console.log($$typeof);
-
-//     console.log('doing it', ObservablePrimitiveClass);
-
-//     Object.defineProperties(ObservablePrimitiveClass.prototype, {
-//         $$typeof: { value: $$typeof },
-//         type: { value: Text },
-//         props: {
-//             get() {
-//                 return { data: this };
-//             },
-//         },
-//         ref: { value: null },
-//     });
-
-//     console.log('did it');
-// }
-// wrap();

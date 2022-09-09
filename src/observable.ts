@@ -207,14 +207,7 @@ function updateNodes(parent: NodeValue, obj: Record<any, any> | Array<any>, prev
     }
 }
 
-function getPrimitive(node: NodeValue, p?: string) {
-    const needsWrap = !node.proxy;
-    const proxy = getProxy(node, p);
-
-    return needsWrap ? new ObservablePrimitiveClass(proxy) : proxy;
-}
-
-function getProxy(node: NodeValue, p?: string | number) {
+function getProxy(node: NodeValue, p?: string | number, primitive?: boolean) {
     // Get the child node if p prop
     if (p !== undefined) node = getChildNode(node, p);
 
@@ -223,25 +216,19 @@ function getProxy(node: NodeValue, p?: string | number) {
     if (!proxy) {
         // Return a Proxy for this node
         proxy = node.proxy = new Proxy<NodeValue>(node, proxyHandler) as ObservableObject;
+        // If it's a primitive wrap it in ObservablePrimitiveClass so it can have its prototype extended
+        if (primitive) {
+            proxy = new ObservablePrimitiveClass(proxy);
+        }
     }
     return proxy;
 }
-function prop(node: NodeValue, keyOrTrack?: string | number | boolean | Symbol, track?: boolean | Symbol) {
-    if (isBoolean(keyOrTrack) || isSymbol(keyOrTrack)) {
-        track = keyOrTrack;
-        keyOrTrack = undefined;
-    }
-
-    if (keyOrTrack !== undefined) {
-        node = getChildNode(node, keyOrTrack as string | number);
-    }
-
-    // Untrack by default
-    checkTracking(node, track === true ? Tracking.normal : track === false ? undefined : track);
-
+function prop(node: NodeValue, key?: string | number) {
+    node = getChildNode(node, key);
+    // Need to get the value to check if it's a primitive
     const value = getNodeValue(node);
 
-    return isPrimitive(value) ? getPrimitive(node) : getProxy(node);
+    return getProxy(node, undefined, isPrimitive(value));
 }
 
 const proxyHandler: ProxyHandler<any> = {
@@ -498,7 +485,7 @@ function setProp(node: NodeValue, key: string | number, newValue?: any, level?: 
 
     inSetFn = false;
 
-    return isRoot ? getProxy(node) : isPrim ? getPrimitive(node, key as string) : getProxy(node, key);
+    return isRoot ? getProxy(node) : getProxy(node, key, isPrim);
 }
 
 function createPreviousHandler(value: any, path: (string | number)[], prevAtPath: any) {
@@ -662,7 +649,7 @@ export function observable<T>(value: T | Promise<T>, safe?: boolean): Observable
         key: undefined,
     };
 
-    const proxy = (isPrim ? getPrimitive(node) : getProxy(node)) as ObservableObjectOrPrimitive<T>;
+    const proxy = getProxy(node, undefined, isPrim) as ObservableObjectOrPrimitive<T>;
 
     if (promise) {
         promise.catch((error) => {

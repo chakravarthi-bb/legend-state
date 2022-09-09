@@ -7,8 +7,6 @@ export interface ListenerOptions {
 
 export interface ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
-    prop?(track?: boolean | Symbol): Observable<T>;
-    prop?<K extends keyof T>(prop: K, track?: boolean | Symbol): Observable<T[K]>;
     onChange?(cb: ListenerFn<T>, options?: ListenerOptions): ObservableListenerDispose;
 }
 export interface ObservablePrimitive<T = any> extends ObservableBaseFns<T> {
@@ -17,11 +15,7 @@ export interface ObservablePrimitive<T = any> extends ObservableBaseFns<T> {
 export interface ObservableFns<T> extends ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
     get?<K extends keyof T>(key: K, track?: boolean | Symbol): T[K];
-    prop?(track?: boolean | Symbol): ObservableObject<T>;
-    prop?<K extends keyof T>(
-        prop: K,
-        track?: boolean | Symbol
-    ): T[K] extends Primitive ? ObservablePrimitive<T[K]> : ObservableObject<T[K]>;
+    prop?<K extends keyof T>(prop: K): T[K] extends Primitive ? ObservablePrimitive<T[K]> : ObservableObject<T[K]>;
     set?(value: T | ((prev: T) => T)): Observable<T>;
     set?<K extends keyof T>(key: K, prev: T[K] | ((prev: T[K]) => T[K])): Observable<T[K]>;
     set?<V>(key: string | number, value: V): Observable<V>;
