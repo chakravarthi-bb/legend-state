@@ -1,6 +1,6 @@
-import { effect, extraPrimitiveProps, setupTracking, tracking } from '@legendapp/state';
-import { ComponentProps, createElement, FC, forwardRef, memo, useEffect } from 'react';
-import { useForceRender } from './useForceRender';
+import { extraPrimitiveProps } from '@legendapp/state';
+import { ComponentProps, createElement, FC, forwardRef, memo } from 'react';
+import { useComputed } from './useComputed';
 
 const hasSymbol = typeof Symbol === 'function' && Symbol.for;
 
@@ -27,48 +27,7 @@ export function observer<T extends FC<any>>(
 
     // Create a wrapper observer component
     let observer = function (props, ref) {
-        let inRender = true;
-        let rendered;
-        let cachedNodes;
-
-        const forceRender = useForceRender();
-
-        const update = function () {
-            if (inRender) {
-                // If rendering, run and return the component
-                rendered = component(props, ref);
-            } else {
-                // If not rendering, this is from observable changing so trigger a render
-                forceRender();
-            }
-            inRender = false;
-
-            // Workaround for React 18's double calling useEffect - cached the tracking nodes
-            if (process.env.NODE_ENV === 'development') {
-                cachedNodes = tracking.nodes;
-            }
-        };
-
-        let dispose = effect(update);
-
-        if (process.env.NODE_ENV === 'development') {
-            useEffect(() => {
-                // Workaround for React 18's double calling useEffect. If this is the
-                // second useEffect, set up tracking again.
-                if (dispose === undefined) {
-                    dispose = setupTracking(cachedNodes, update);
-                }
-                return () => {
-                    dispose();
-                    dispose = undefined;
-                };
-            });
-        } else {
-            // Return dispose to cleanup before each render or unmount
-            useEffect(() => dispose);
-        }
-
-        return rendered;
+        return useComputed(() => component(props, ref));
     };
 
     if (componentName !== '') {
@@ -83,8 +42,9 @@ export function observer<T extends FC<any>>(
     return memo(observer, propsAreEqual) as unknown as T;
 }
 
-const Text = observer(function Text({ data }: { data: any }) {
-    return data?.get() ?? null;
+const Text = memo(function Text({ data }: { data: any }) {
+    const get = data?.get;
+    return get ? useComputed(get) : null;
 });
 
 const ReactTypeofSymbol = hasSymbol ? Symbol.for('react.element') : (createElement('a') as any).$$typeof;

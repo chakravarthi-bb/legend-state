@@ -1,4 +1,4 @@
-import type { Observable } from 'src/observableInterfaces';
+import type { Observable } from '../src/observableInterfaces';
 import { beginBatch, endBatch } from '../src/batching';
 import { computed } from '../src/computed';
 import { effect } from '../src/effect';
