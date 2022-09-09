@@ -26,7 +26,7 @@ export function mergeIntoObservable(target: ObservableObject | object, ...source
     if (isObject(target) && isObject(source)) {
         if (source[symbolDateModified as any]) {
             if (needsSet) {
-                (target as ObservableObject).set(symbolDateModified, source[symbolDateModified as any]);
+                (target as ObservableObject<any>).set(symbolDateModified, source[symbolDateModified as any]);
             } else {
                 target[symbolDateModified as any] = source[symbolDateModified as any];
             }

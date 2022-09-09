@@ -430,11 +430,13 @@ function setProp(node: NodeValue, key: string | number, newValue?: any, level?: 
     // Save the previous value first
     const prevValue = parentValue[key];
 
+    const isObj = isObject(newValue);
+
     // Compute newValue if newValue is a function or an observable
     newValue = newValue
         ? isFunction(newValue)
             ? newValue(prevValue)
-            : isObject(newValue) && newValue[symbolIsObservable as any]
+            : isObj && newValue[symbolIsObservable as any]
             ? newValue.get()
             : newValue
         : newValue;
@@ -445,6 +447,17 @@ function setProp(node: NodeValue, key: string | number, newValue?: any, level?: 
     if (isDelete) {
         delete parentValue[key];
     } else {
+        if (isRoot && prevValue) {
+            const keys = Object.keys(prevValue);
+            for (let i = 0; i < keys.length; i++) {
+                const k = keys[i];
+                const p = prevValue[k];
+                const v = newValue[k];
+                if (!v && isFunction(p)) {
+                    newValue[k] = p;
+                }
+            }
+        }
         parentValue[key] = newValue;
     }
 

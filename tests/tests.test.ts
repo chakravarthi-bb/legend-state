@@ -1,11 +1,11 @@
+import type { Observable } from 'src/observableInterfaces';
+import { beginBatch, endBatch } from '../src/batching';
 import { computed } from '../src/computed';
 import { effect } from '../src/effect';
+import { event } from '../src/event';
 import { isObservable, lockEdits } from '../src/helpers';
 import { observable } from '../src/observable';
-import { beginBatch, endBatch } from '../src/batching';
-import { event } from '../src/event';
 import { when } from '../src/when';
-import type { Observable } from 'src/observableInterfaces';
 
 function promiseTimeout(time?: number) {
     return new Promise((resolve) => setTimeout(resolve, time || 0));
@@ -1720,5 +1720,16 @@ describe('Locking', () => {
         lockEdits(obs, false);
         obs.text.set('hey');
         expect(obs.get()).toEqual({ text: 'hey' });
+    });
+});
+describe('Functions', () => {
+    test('Creating with functions', () => {
+        const obs = observable({ text: 'hi', test: () => 10 });
+        expect(obs.test()).toEqual(10);
+    });
+    test('Set does not delete functions', () => {
+        const obs = observable({ text: 'hi', test: () => 10 });
+        obs.set({ text: 'hello' });
+        expect(obs.test()).toEqual(10);
     });
 });

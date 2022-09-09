@@ -54,6 +54,9 @@ export type ListenerFn<T = any> = (
 
 type PrimitiveKeys<T> = Pick<T, { [K in keyof T]-?: T[K] extends Primitive ? K : never }[keyof T]>;
 type NonPrimitiveKeys<T> = Pick<T, { [K in keyof T]-?: T[K] extends Primitive ? never : K }[keyof T]>;
+type FunctionKeys<T> = Partial<Pick<T, { [K in keyof T]?: T[K] extends Function ? K : never }[keyof T]>>;
+type NonFunctionKeys<T> = Pick<T, { [K in keyof T]: T[K] extends Function ? never : K }[keyof T]>;
+type FunctionsOptional<T> = FunctionKeys<T> & NonFunctionKeys<T>;
 
 type Recurse<T, K extends keyof T, TRecurse> = T[K] extends
     | Function
@@ -157,7 +160,7 @@ export interface ObservablePersistRemote {
 export interface ObservablePersistState {
     isLoadedLocal: boolean;
     isLoadedRemote: boolean;
-    clearLocal: () => Promise<void>;
+    clearLocal?: () => Promise<void>;
 }
 export type RecordValue<T> = T extends Record<string, infer t> ? t : never;
 export type ArrayValue<T> = T extends Array<infer t> ? t : never;
@@ -223,23 +226,20 @@ export type Primitive = boolean | string | number | Date;
 export type ObservableObject<T = any> = ObservableFnsRecursive<T> & ObservableFns<T>;
 export type ObservableObjectSafe<T = any> = ObservableFnsRecursiveSafe<T> & ObservableFns<T>;
 export type ObservableObjectDefault<T = any> = ObservableFnsRecursiveDefault<T> & ObservableFns<T>;
-// export type ObservableChild<T = any> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
-// export type ObservableRef<T = any> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
 export type ObservableObjectOrPrimitive<T> = [T] extends [Primitive] ? ObservablePrimitive<T> : ObservableObject<T>;
 export type ObservableObjectOrPrimitiveSafe<T> = [T] extends [Primitive]
     ? ObservablePrimitive<T>
-    : ObservableObjectSafe<T>;
+    : ObservableObjectSafe<FunctionsOptional<T>>;
 export type ObservableObjectOrPrimitiveDefault<T> = [T] extends [Primitive]
     ? ObservablePrimitive<T>
-    : ObservableObjectDefault<T>;
+    : ObservableObjectDefault<FunctionsOptional<T>>;
 export type ObservableComputed<T = any> = ObservableComputedFns<T> &
     ObservableComputedFnsRecursive<T> &
     ([T] extends [Primitive] ? Omit<ObservablePrimitive<T>, 'set'> : T);
 
 export type Observable<T = any> = ObservablePrimitive<T> | ObservableFns<T>;
 export type ObservableReadable<T = any> = ObservableFns<T> | ObservableComputed<T> | ObservablePrimitive<T>;
-// | ObservableRef<T>;
-export type ObservableWriteable<T = any> = ObservableFns<T> | ObservablePrimitive<T>; // | ObservableRef<T>;
+export type ObservableWriteable<T = any> = ObservableFns<T> | ObservablePrimitive<T>;
 
 export interface NodeValue {
     id: number;
