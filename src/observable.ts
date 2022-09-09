@@ -1,6 +1,5 @@
 import { batchNotify, beginBatch, endBatch } from './batching';
 import {
-    checkTracking,
     extraPrimitiveProps,
     get,
     getChildNode,
@@ -10,7 +9,7 @@ import {
     symbolIsObservable,
     Tracking,
 } from './globals';
-import { isArray, isBoolean, isFunction, isObject, isPrimitive, isSymbol } from './is';
+import { isArray, isFunction, isObject, isPrimitive, isSymbol } from './is';
 import {
     NodeValue,
     Observable,
@@ -23,7 +22,7 @@ import {
 } from './observableInterfaces';
 import { ObservablePrimitiveClass } from './ObservablePrimitive';
 import { onChange } from './onChange';
-import { tracking, untrack, updateTracking } from './tracking';
+import { tracking, updateTracking } from './tracking';
 
 let inSetFn = false;
 let inAssign = false;
@@ -245,10 +244,6 @@ const proxyHandler: ProxyHandler<any> = {
         const fn = objectFns.get(p);
         // If this is an observable function, call it
         if (fn) {
-            if (p !== 'get' && p !== 'ref') {
-                // Observable operations do not create listeners
-                if (tracking.nodes) untrack(node);
-            }
             return function (a, b, c) {
                 const l = arguments.length;
                 // Array call and apply are slow so micro-optimize this hot path.
@@ -276,7 +271,7 @@ const proxyHandler: ProxyHandler<any> = {
                     // Update that this node was accessed for observers
                     // Listen to the array shallowly
                     if (tracking.nodes) {
-                        updateTracking(node, undefined, Tracking.shallow);
+                        updateTracking(node, Tracking.shallow);
                     }
                     return function (cbOrig, thisArg) {
                         function cb(_, index: number, array: any[]) {
@@ -300,12 +295,11 @@ const proxyHandler: ProxyHandler<any> = {
                     return vPrim?.__fn?.(getProxy(target)) ?? vPrim;
                 }
             }
-            // Update that this primitive node was accessed for observers
+
             if (tracking.nodes) {
+                // Update that this primitive node was accessed for observers
                 if (isArray(value) && p === 'length') {
-                    updateTracking(node, undefined, Tracking.shallow);
-                } else if (node.root.isPrimitive) {
-                    updateTracking(node);
+                    updateTracking(node, Tracking.shallow);
                 }
             }
 
@@ -328,7 +322,7 @@ const proxyHandler: ProxyHandler<any> = {
 
         // Update that this node was accessed for observers
         if (tracking.nodes) {
-            updateTracking(target, undefined, Tracking.shallow);
+            updateTracking(target, Tracking.shallow);
         }
 
         // This is required to fix this error:
@@ -425,9 +419,6 @@ function setProp(node: NodeValue, key: string | number, newValue?: any, level?: 
 
     // Get the child node for updating and notifying
     let childNode: NodeValue = isRoot ? node : getChildNode(node, key);
-
-    // Set operations do not create listeners
-    if (tracking.nodes) untrack(childNode);
 
     // Get the value of the parent
     let parentValue = isRoot ? node.root : getNodeValue(node);
@@ -573,9 +564,6 @@ function notify(node: NodeValue, value: any, prev: any, level: number, whenOptim
 }
 
 function assign(node: NodeValue, value: any) {
-    // Set operations do not create listeners
-    if (tracking.nodes) untrack(node);
-
     const proxy = getProxy(node);
 
     beginBatch();

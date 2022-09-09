@@ -1,6 +1,6 @@
 import { isBoolean, isString, isSymbol } from './is';
 import { NodeValue } from './observableInterfaces';
-import { tracking, untrack, updateTracking } from './tracking';
+import { tracking, updateTracking } from './tracking';
 
 export const symbolDateModified = Symbol('dateModified');
 export const symbolIsObservable = Symbol('isObservable');
@@ -15,16 +15,6 @@ export namespace Tracking {
 }
 export const nextNodeID = { current: 0 };
 
-export function checkTracking(node: NodeValue, track: boolean | Symbol) {
-    if (tracking.nodes) {
-        if (track) {
-            updateTracking(node, undefined, track, /*manual*/ true);
-        } else {
-            untrack(node);
-        }
-    }
-}
-
 export function get(node: NodeValue, keyOrTrack?: string | number | boolean | Symbol, track?: boolean | Symbol) {
     if (isBoolean(keyOrTrack) || isSymbol(keyOrTrack)) {
         track = keyOrTrack;
@@ -32,7 +22,9 @@ export function get(node: NodeValue, keyOrTrack?: string | number | boolean | Sy
     }
 
     // Track by default
-    checkTracking(node, track === true || track === undefined ? Tracking.normal : track === false ? undefined : track);
+    if (track !== false && tracking.nodes) {
+        updateTracking(node, track || Tracking.normal, /*manual*/ true);
+    }
 
     const value = getOutputValue(node);
     return keyOrTrack ? value?.[keyOrTrack as string | number] : value;
