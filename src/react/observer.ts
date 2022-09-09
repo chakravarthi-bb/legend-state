@@ -79,7 +79,7 @@ export function observer<T extends FC<any>>(
 }
 
 const Text = observer(function Text({ data }: { data: any }) {
-    return data?.get() || null;
+    return data?.get() ?? null;
 });
 
 const ReactTypeofSymbol = hasSymbol ? Symbol.for('react.element') : (createElement('a') as any).$$typeof;
