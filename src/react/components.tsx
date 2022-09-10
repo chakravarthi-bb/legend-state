@@ -54,7 +54,7 @@ export const Binder = function <
             }
 
             return createElement(Component as any, ref ? { ...props, ref } : props);
-        })
+        }) as (props: Props<TValue, TProps>) => ReactElement | null
     );
 };
 

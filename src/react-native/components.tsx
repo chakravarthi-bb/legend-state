@@ -52,7 +52,7 @@ export const Binder = function <
             return createElement(Component as any, ref ? { ...props, ref } : props);
         })
         // TS hack because forwardRef messes with the templating
-    );
+    ) as any as (props: Props<TValue, TStyle, TProps>) => ReactElement | null;
 };
 
 export namespace LS {
