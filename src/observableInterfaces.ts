@@ -16,12 +16,15 @@ export interface ObservableFns<T> extends ObservableBaseFns<T> {
     get?(track?: boolean | Symbol): T;
     get?<K extends keyof T>(key: K, track?: boolean | Symbol): T[K];
     prop?<K extends keyof T>(prop: K): T[K] extends Primitive ? ObservablePrimitive<T[K]> : ObservableObject<T[K]>;
-    set?(value: T | ((prev: T) => T)): Observable<T>;
-    set?<K extends keyof T>(key: K, prev: T[K] | ((prev: T[K]) => T[K])): Observable<T[K]>;
-    set?<V>(key: string | number, value: V): Observable<V>;
-    assign?(value: T | Partial<T>): Observable<T>;
-    delete?(): Observable<T>;
-    delete?<K extends keyof T>(key: K | string | number): Observable<T>;
+    set?(value: T | ((prev: T) => T)): T extends Primitive ? ObservablePrimitive<T> : ObservableObject<T>;
+    set?<K extends keyof T>(
+        key: K,
+        prev: T[K] | ((prev: T[K]) => T[K])
+    ): T[K] extends Primitive ? ObservablePrimitive<T[K]> : ObservableObject<T[K]>;
+    set?<V>(key: string | number, value: V): V extends Primitive ? ObservablePrimitive<V> : ObservableObject<V>;
+    assign?(value: T | Partial<T>): T extends Primitive ? ObservablePrimitive<T> : ObservableObject<T>;
+    delete?(): void;
+    delete?<K extends keyof T>(key: K | string | number): void;
 }
 export interface ObservableComputedFns<T> {
     get(track?: boolean | Symbol): T;
