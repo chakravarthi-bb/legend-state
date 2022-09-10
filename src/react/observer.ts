@@ -1,8 +1,11 @@
-import { extraPrimitiveProps } from '@legendapp/state';
+import { extraPrimitiveProps, Observable } from '@legendapp/state';
 import { ComponentProps, createElement, FC, forwardRef, memo } from 'react';
 import { useComputed } from './useComputed';
 
 const hasSymbol = typeof Symbol === 'function' && Symbol.for;
+export const returnTrue = function () {
+    return true;
+};
 
 // Extracting the forwardRef inspired by https://github.com/mobxjs/mobx/blob/main/packages/mobx-react-lite/src/observer.ts
 const ReactForwardRefSymbol = hasSymbol
@@ -42,12 +45,15 @@ export function observer<T extends FC<any>>(
     return memo(observer, propsAreEqual) as unknown as T;
 }
 
-const Text = memo(function Text({ data }: { data: any }) {
+// Memoized component to wrap the observable value
+const Text = memo(function Text({ data }: { data: Observable }) {
     const get = data?.get;
     return get ? useComputed(get) : null;
-});
+}, returnTrue);
 
 const ReactTypeofSymbol = hasSymbol ? Symbol.for('react.element') : (createElement('a') as any).$$typeof;
+
+// Set extra props for the proxyHandler to return on primitives
 extraPrimitiveProps.set('$$typeof', ReactTypeofSymbol);
 extraPrimitiveProps.set('type', Text);
 extraPrimitiveProps.set('props', {
