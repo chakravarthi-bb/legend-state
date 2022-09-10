@@ -20,7 +20,6 @@ import {
     ObservablePrimitive,
     ObservableWrapper,
 } from './observableInterfaces';
-import { ObservablePrimitiveClass } from './ObservablePrimitive';
 import { onChange } from './onChange';
 import { tracking, updateTracking } from './tracking';
 
@@ -215,10 +214,6 @@ function getProxy(node: NodeValue, p?: string | number, primitive?: boolean) {
     if (!proxy) {
         // Return a Proxy for this node
         proxy = node.proxy = new Proxy<NodeValue>(node, proxyHandler) as ObservableObject;
-        // If it's a primitive wrap it in ObservablePrimitiveClass so it can have its prototype extended
-        if (primitive) {
-            proxy = new ObservablePrimitiveClass(proxy);
-        }
     }
     return proxy;
 }
@@ -232,7 +227,7 @@ function prop(node: NodeValue, key?: string | number) {
 
 const proxyHandler: ProxyHandler<any> = {
     get(target: NodeValue, p: any) {
-        // Return true is called by isObservable()
+        // Return true if called by isObservable()
         if (p === symbolIsObservable) {
             return true;
         }
