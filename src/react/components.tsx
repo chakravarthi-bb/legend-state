@@ -1,4 +1,5 @@
 import { isFunction } from '@legendapp/state';
+import { observer } from '@legendapp/state/react';
 import {
     ChangeEvent,
     createElement,
@@ -12,13 +13,12 @@ import {
     TextareaHTMLAttributes,
     useCallback,
 } from 'react';
-import type { ObservableWriteable, Primitive } from '../observableInterfaces';
-import { observer } from '@legendapp/state/react';
+import type { ObservablePrimitive, Primitive } from '../observableInterfaces';
 
 type Props<TValue, TProps> = Omit<TProps, 'className' | 'style'> & {
     className?: string | ((value: TValue) => string);
     style?: CSSProperties | ((value: TValue) => CSSProperties);
-    bind?: ObservableWriteable<TValue>;
+    bind?: ObservablePrimitive<TValue>;
 };
 
 export const Binder = function <

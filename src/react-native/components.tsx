@@ -12,11 +12,11 @@ import {
     TextStyle,
     ViewStyle,
 } from 'react-native';
-import { ObservableObject, ObservableWriteable, Primitive } from '../observableInterfaces';
+import { ObservablePrimitive, Primitive } from '../observableInterfaces';
 import { observer } from '../react/observer';
 
 type Props<TValue, TStyle, TProps> = Omit<TProps, 'style'> & {
-    bind?: ObservableWriteable<TValue>;
+    bind?: ObservablePrimitive<TValue>;
     style?: StyleProp<TStyle> | ((value: TValue) => StyleProp<TStyle>);
 };
 
